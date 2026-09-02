@@ -1,4 +1,6 @@
-# stackinit
+# StackInit
+
+A Bun-powered CLI for bootstrapping and managing application stacks.
 
 To install dependencies:
 
@@ -6,10 +8,21 @@ To install dependencies:
 bun install
 ```
 
-To run:
+Run the CLI from source:
 
 ```bash
-bun run index.ts
+bun run src/index.ts --help
+bun run src/index.ts --version
 ```
 
-This project was created using `bun init` in bun v1.4.0. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+## Development
+
+```bash
+bun run typecheck
+bun test
+bun run build
+```
+
+The npm package exposes the compiled executable as `stackinit`. The current
+milestone provides the CLI foundation only; stack generators and integrations
+are not implemented yet.
