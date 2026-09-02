@@ -13,6 +13,7 @@ Run the CLI from source:
 ```bash
 bun run src/index.ts --help
 bun run src/index.ts --version
+bun run src/index.ts create my-app
 ```
 
 ## Development
@@ -23,6 +24,6 @@ bun test
 bun run build
 ```
 
-The npm package exposes the compiled executable as `stackinit`. The current
-milestone provides the CLI foundation only; stack generators and integrations
-are not implemented yet.
+The npm package exposes the compiled executable as `stackinit`. The `create`
+command collects and confirms project configuration; it does not generate files
+or run a framework generator yet.

@@ -27,8 +27,9 @@ describe("stackinit CLI", () => {
   test("shows help", () => {
     const output = runCli(["--help"]);
 
-    expect(output).toContain("Usage: stackinit [options]");
+    expect(output).toContain("Usage: stackinit [options] [command]");
     expect(output).toContain("Bootstrap and manage modern application stacks.");
+    expect(output).toContain("create [project-name]");
   });
 
   test("shows the package version", () => {
