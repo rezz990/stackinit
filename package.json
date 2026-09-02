@@ -1,5 +1,7 @@
 {
   "name": "stackinit",
+  "version": "0.1.0",
+  "description": "A modern CLI for bootstrapping and managing application stacks.",
   "module": "index.ts",
   "type": "module",
   "private": true,
