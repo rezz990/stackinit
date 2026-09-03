@@ -4,7 +4,7 @@ import type {
   Database,
   Framework,
   Orm,
-  PackageManager,
+  PackageManagerId,
   ProjectContext,
   Styling,
 } from "../types/project-context.ts";
@@ -12,7 +12,7 @@ import type {
 export interface ProjectConfiguration {
   readonly name: string;
   readonly framework: Framework;
-  readonly packageManager: PackageManager;
+  readonly packageManager: PackageManagerId;
   readonly database: Database;
   readonly orm: Orm;
   readonly styling: Styling;

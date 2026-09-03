@@ -1,33 +1,50 @@
 import { describe, expect, test } from "bun:test";
 
-import { NextjsAdapter, NextjsCreationError } from "../src/adapters/nextjs-adapter.ts";
-import type {
-  CommandResult,
-  CommandRunner,
-  RunCommandOptions,
-} from "../src/core/command-runner.ts";
-import type { ProjectContext } from "../src/types/project-context.ts";
+import { NextjsAdapter } from "../src/adapters/nextjs-adapter.ts";
+import type { PackageManager } from "../src/core/package-manager.ts";
+import type { PackageManagerId, ProjectContext } from "../src/types/project-context.ts";
 
-class RecordingCommandRunner implements CommandRunner {
-  command: string | undefined;
+class RecordingPackageManager implements PackageManager {
+  readonly name = "Test package manager";
+  packageName: string | undefined;
   arguments: readonly string[] | undefined;
+  error: Error | undefined;
 
-  constructor(
-    private readonly result: CommandResult = {
-      exitCode: 0,
-      stdout: "",
-      stderr: "",
-    },
-  ) {}
+  constructor(readonly id: PackageManagerId = "bun") {}
 
-  run(
-    command: string,
-    arguments_: readonly string[],
-    _options?: RunCommandOptions,
-  ): Promise<CommandResult> {
-    this.command = command;
+  isAvailable(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
+  install(_cwd: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  add(_packages: readonly string[], _cwd: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  addDev(_packages: readonly string[], _cwd: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  remove(_packages: readonly string[], _cwd: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  run(_script: string, _cwd: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  exec(packageName: string, arguments_: readonly string[]): Promise<void> {
+    if (this.error !== undefined) return Promise.reject(this.error);
+    this.packageName = packageName;
     this.arguments = arguments_;
-    return Promise.resolve(this.result);
+    return Promise.resolve();
+  }
+
+  formatRunCommand(script: string): string {
+    return `test run ${script}`;
   }
 }
 
@@ -45,14 +62,13 @@ function context(overrides: Partial<ProjectContext> = {}): ProjectContext {
 }
 
 describe("NextjsAdapter", () => {
-  test("builds a non-interactive Bun create-next-app command", async () => {
-    const runner = new RecordingCommandRunner();
+  test("forwards a non-interactive create-next-app invocation", async () => {
+    const packageManager = new RecordingPackageManager();
 
-    await new NextjsAdapter(runner).create(context());
+    await new NextjsAdapter(packageManager).create(context());
 
-    expect(runner.command).toBe("bunx");
-    expect(runner.arguments).toEqual([
-      "create-next-app@latest",
+    expect(packageManager.packageName).toBe("create-next-app@latest");
+    expect(packageManager.arguments).toEqual([
       "/workspaces/washflow",
       "--ts",
       "--eslint",
@@ -67,46 +83,30 @@ describe("NextjsAdapter", () => {
   });
 
   test("disables Tailwind when it is not selected", async () => {
-    const runner = new RecordingCommandRunner();
+    const packageManager = new RecordingPackageManager();
 
-    await new NextjsAdapter(runner).create(context({ styling: "none" }));
-
-    expect(runner.arguments).toContain("--no-tailwind");
-    expect(runner.arguments).not.toContain("--tailwind");
-  });
-
-  test("uses the selected package manager", async () => {
-    const runner = new RecordingCommandRunner();
-
-    await new NextjsAdapter(runner).create(context({ packageManager: "pnpm" }));
-
-    expect(runner.command).toBe("pnpm");
-    expect(runner.arguments?.slice(0, 2)).toEqual([
-      "dlx",
-      "create-next-app@latest",
-    ]);
-    expect(runner.arguments).toContain("--use-pnpm");
-  });
-
-  test("reports generator failures", async () => {
-    const runner = new RecordingCommandRunner({
-      exitCode: 1,
-      stdout: "",
-      stderr: "network unavailable",
-    });
-
-    await expect(new NextjsAdapter(runner).create(context())).rejects.toEqual(
-      new NextjsCreationError("network unavailable"),
+    await new NextjsAdapter(packageManager).create(
+      context({ styling: "none" }),
     );
+
+    expect(packageManager.arguments).toContain("--no-tailwind");
+    expect(packageManager.arguments).not.toContain("--tailwind");
   });
 
-  test("propagates command runner errors", async () => {
-    const runner: CommandRunner = {
-      run: () => Promise.reject(new Error("could not launch bunx")),
-    };
+  test("rejects a mismatched package manager", async () => {
+    const packageManager = new RecordingPackageManager("pnpm");
 
-    await expect(new NextjsAdapter(runner).create(context())).rejects.toThrow(
-      "could not launch bunx",
-    );
+    await expect(
+      new NextjsAdapter(packageManager).create(context()),
+    ).rejects.toThrow('Package manager "pnpm" does not match');
+  });
+
+  test("propagates package manager errors", async () => {
+    const packageManager = new RecordingPackageManager();
+    packageManager.error = new Error("generator failed");
+
+    await expect(
+      new NextjsAdapter(packageManager).create(context()),
+    ).rejects.toThrow("generator failed");
   });
 });

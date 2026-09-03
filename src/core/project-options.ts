@@ -2,7 +2,7 @@ import type {
   Database,
   Framework,
   Orm,
-  PackageManager,
+  PackageManagerId,
   Styling,
 } from "../types/project-context.ts";
 
@@ -36,7 +36,7 @@ export const PROJECT_OPTIONS = {
   ],
 } as const satisfies {
   readonly frameworks: readonly ProjectOption<Framework>[];
-  readonly packageManagers: readonly ProjectOption<PackageManager>[];
+  readonly packageManagers: readonly ProjectOption<PackageManagerId>[];
   readonly databases: readonly ProjectOption<Database>[];
   readonly orms: readonly ProjectOption<Orm>[];
   readonly styling: readonly ProjectOption<Styling>[];

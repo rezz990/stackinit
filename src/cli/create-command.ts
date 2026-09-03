@@ -3,6 +3,7 @@ import type { Command } from "commander";
 
 import { ExecaCommandRunner } from "../adapters/execa-command-runner.ts";
 import { NextjsAdapter } from "../adapters/nextjs-adapter.ts";
+import { createPackageManager } from "../adapters/package-manager.ts";
 import { createProject } from "../core/create-project.ts";
 import {
   createProjectContext,
@@ -13,7 +14,7 @@ import type {
   Database,
   Framework,
   Orm,
-  PackageManager,
+  PackageManagerId,
   ProjectContext,
   Styling,
 } from "../types/project-context.ts";
@@ -54,7 +55,7 @@ export async function promptForProjectContext(
   });
   if (wasCancelled(framework)) return undefined;
 
-  const packageManager = await prompts.select<PackageManager>({
+  const packageManager = await prompts.select<PackageManagerId>({
     message: "Package manager",
     options: [...PROJECT_OPTIONS.packageManagers],
   });
@@ -121,19 +122,21 @@ export function registerCreateCommand(program: Command): void {
       progress.start("Creating project...");
 
       try {
-        await createProject(context, new NextjsAdapter(new ExecaCommandRunner()));
+        const packageManager = createPackageManager(
+          context.packageManager,
+          new ExecaCommandRunner(),
+        );
+        await createProject(context, new NextjsAdapter(packageManager));
         progress.stop("Next.js project created");
+
+        prompts.outro(
+          `Project ready.\n\ncd ${context.name}\n${packageManager.formatRunCommand("dev")}`,
+        );
       } catch (error) {
         progress.error("Project creation failed");
         prompts.cancel(error instanceof Error ? error.message : "Unexpected error.");
         process.exitCode = 1;
         return;
       }
-
-      const runCommand =
-        context.packageManager === "npm"
-          ? "npm run dev"
-          : `${context.packageManager} dev`;
-      prompts.outro(`Project ready.\n\ncd ${context.name}\n${runCommand}`);
     });
 }
