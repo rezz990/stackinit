@@ -24,6 +24,6 @@ bun test
 bun run build
 ```
 
-The npm package exposes the compiled executable as `stackinit`. The `create`
-command collects and confirms project configuration; it does not generate files
-or run a framework generator yet.
+The npm package exposes the compiled executable as `stackinit`. After collecting
+and confirming the project configuration, the `create` command runs the official
+`create-next-app` generator with non-interactive options.

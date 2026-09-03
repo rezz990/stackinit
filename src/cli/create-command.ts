@@ -1,6 +1,9 @@
 import * as prompts from "@clack/prompts";
 import type { Command } from "commander";
 
+import { ExecaCommandRunner } from "../adapters/execa-command-runner.ts";
+import { NextjsAdapter } from "../adapters/nextjs-adapter.ts";
+import { createProject } from "../core/create-project.ts";
 import {
   createProjectContext,
   validateProjectName,
@@ -114,6 +117,23 @@ export function registerCreateCommand(program: Command): void {
       if (context === undefined) return;
 
       prompts.note(formatProjectSummary(context), "StackInit");
-      prompts.outro("Configuration ready.");
+      const progress = prompts.spinner();
+      progress.start("Creating project...");
+
+      try {
+        await createProject(context, new NextjsAdapter(new ExecaCommandRunner()));
+        progress.stop("Next.js project created");
+      } catch (error) {
+        progress.error("Project creation failed");
+        prompts.cancel(error instanceof Error ? error.message : "Unexpected error.");
+        process.exitCode = 1;
+        return;
+      }
+
+      const runCommand =
+        context.packageManager === "npm"
+          ? "npm run dev"
+          : `${context.packageManager} dev`;
+      prompts.outro(`Project ready.\n\ncd ${context.name}\n${runCommand}`);
     });
 }
