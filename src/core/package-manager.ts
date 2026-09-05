@@ -15,5 +15,15 @@ export interface PackageManager {
     arguments_: readonly string[],
     cwd?: string,
   ): Promise<void>;
+  execute(
+    binaryName: string,
+    arguments_: readonly string[],
+    cwd: string,
+    options?: PackageManagerExecutionOptions,
+  ): Promise<void>;
   formatRunCommand(script: string): string;
+}
+
+export interface PackageManagerExecutionOptions {
+  readonly env?: Readonly<Record<string, string | undefined>>;
 }

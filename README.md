@@ -27,3 +27,8 @@ bun run build
 The npm package exposes the compiled executable as `stackinit`. After collecting
 and confirming the project configuration, the `create` command runs the official
 `create-next-app` generator with non-interactive options.
+
+When Supabase is selected, StackInit configures Prisma 7 with PostgreSQL,
+creates a reusable Prisma Client, and adds safe `DATABASE_URL` and `DIRECT_URL`
+placeholders. Replace those placeholders in the generated project's `.env`
+before using database functionality.

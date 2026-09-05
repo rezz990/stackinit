@@ -72,6 +72,24 @@ describe("CommandPackageManager", () => {
     });
   });
 
+  test.each([
+    ["bun", "bunx", ["prisma", "generate"]],
+    ["npm", "npx", ["--no-install", "prisma", "generate"]],
+    ["pnpm", "pnpm", ["exec", "prisma", "generate"]],
+    ["yarn", "yarn", ["exec", "prisma", "generate"]],
+  ] as const)("executes local binaries with %s", async (id, command, arguments_) => {
+    const runner = new RecordingCommandRunner("4.0.0");
+    const packageManager = new CommandPackageManager(id, runner);
+
+    await packageManager.execute("prisma", ["generate"], "/project");
+
+    expect(lastCall(runner)).toEqual({
+      command,
+      arguments: arguments_,
+      options: { cwd: "/project" },
+    });
+  });
+
   test("generates dependency lifecycle commands", async () => {
     const runner = new RecordingCommandRunner();
     const packageManager = new CommandPackageManager("npm", runner);

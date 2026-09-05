@@ -1,5 +1,8 @@
 import type { CommandRunner } from "../core/command-runner.ts";
-import type { PackageManager } from "../core/package-manager.ts";
+import type {
+  PackageManager,
+  PackageManagerExecutionOptions,
+} from "../core/package-manager.ts";
 import type { PackageManagerId } from "../types/project-context.ts";
 
 interface PackageManagerCommands {
@@ -65,6 +68,13 @@ const EXEC_EXECUTABLES: Readonly<Record<PackageManagerId, string>> = {
   npm: "npx",
   pnpm: "pnpm",
   yarn: "yarn",
+};
+
+const LOCAL_EXEC_ARGUMENTS: Readonly<Record<PackageManagerId, readonly string[]>> = {
+  bun: [],
+  npm: ["--no-install"],
+  pnpm: ["exec"],
+  yarn: ["exec"],
 };
 
 export class PackageManagerUnavailableError extends Error {
@@ -169,6 +179,21 @@ export class CommandPackageManager implements PackageManager {
     );
   }
 
+  async execute(
+    binaryName: string,
+    arguments_: readonly string[],
+    cwd: string,
+    options: PackageManagerExecutionOptions = {},
+  ): Promise<void> {
+    await this.#requireVersion();
+    await this.#run(
+      EXEC_EXECUTABLES[this.id],
+      [...LOCAL_EXEC_ARGUMENTS[this.id], binaryName, ...arguments_],
+      cwd,
+      options.env,
+    );
+  }
+
   formatRunCommand(script: string): string {
     return [EXECUTABLES[this.id], ...this.#commands.run, script].join(" ");
   }
@@ -186,9 +211,11 @@ export class CommandPackageManager implements PackageManager {
     executable: string,
     arguments_: readonly string[],
     cwd: string | undefined,
+    env?: Readonly<Record<string, string | undefined>>,
   ): Promise<void> {
     const result = await this.commandRunner.run(executable, arguments_, {
       ...(cwd === undefined ? {} : { cwd }),
+      ...(env === undefined ? {} : { env }),
     });
     if (result.exitCode !== 0) {
       throw new PackageManagerCommandError(

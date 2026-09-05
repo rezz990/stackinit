@@ -43,12 +43,18 @@ class RecordingPackageManager implements PackageManager {
     return Promise.resolve();
   }
 
+  execute(_binaryName: string, _arguments: readonly string[], _cwd: string): Promise<void> {
+    return Promise.resolve();
+  }
+
   formatRunCommand(script: string): string {
     return `test run ${script}`;
   }
 }
 
-function context(overrides: Partial<ProjectContext> = {}): ProjectContext {
+function context(
+  overrides: Partial<Omit<ProjectContext, "database" | "orm">> = {},
+): ProjectContext {
   return {
     name: "washflow",
     rootDirectory: "/workspaces/washflow",

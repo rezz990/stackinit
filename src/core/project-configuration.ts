@@ -1,9 +1,10 @@
 import { resolve } from "node:path";
 
 import type {
-  Database,
+  DatabaseConfig,
+  DatabaseId,
   Framework,
-  Orm,
+  OrmId,
   PackageManagerId,
   ProjectContext,
   Styling,
@@ -13,8 +14,7 @@ export interface ProjectConfiguration {
   readonly name: string;
   readonly framework: Framework;
   readonly packageManager: PackageManagerId;
-  readonly database: Database;
-  readonly orm: Orm;
+  readonly database: DatabaseId;
   readonly styling: Styling;
 }
 
@@ -39,10 +39,29 @@ export function createProjectContext(
   const validationError = validateProjectName(name);
   if (validationError !== undefined) throw new Error(validationError);
 
+  const databaseConfig: DatabaseConfig =
+    configuration.database === "supabase"
+      ? { database: "supabase", orm: "prisma" }
+      : { database: "none", orm: "none" };
+
   return {
     ...configuration,
     name,
     rootDirectory: resolve(baseDirectory, name),
-    orm: configuration.database === "none" ? "none" : configuration.orm,
+    ...databaseConfig,
   };
+}
+
+export function assertValidDatabaseConfig(configuration: {
+  readonly database: DatabaseId;
+  readonly orm: OrmId;
+}): asserts configuration is DatabaseConfig {
+  const valid =
+    (configuration.database === "supabase" && configuration.orm === "prisma") ||
+    (configuration.database === "none" && configuration.orm === "none");
+  if (!valid) {
+    throw new Error(
+      `Invalid database configuration: ${configuration.database} requires ${configuration.database === "supabase" ? "Prisma" : "no ORM"}.`,
+    );
+  }
 }

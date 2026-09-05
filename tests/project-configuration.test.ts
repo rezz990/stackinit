@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  assertValidDatabaseConfig,
   createProjectContext,
   validateProjectName,
 } from "../src/core/project-configuration.ts";
@@ -23,8 +24,7 @@ describe("project configuration", () => {
         name: " washflow ",
         framework: "nextjs",
         packageManager: "bun",
-        database: "mysql",
-        orm: "prisma",
+        database: "supabase",
         styling: "tailwind",
       },
       "/workspaces",
@@ -35,26 +35,49 @@ describe("project configuration", () => {
       rootDirectory: "/workspaces/washflow",
       framework: "nextjs",
       packageManager: "bun",
-      database: "mysql",
+      database: "supabase",
       orm: "prisma",
       styling: "tailwind",
     });
   });
 
-  test("forces ORM to None when no database is selected", () => {
+  test("maps Supabase to Prisma", () => {
+    const context = createProjectContext(
+      {
+        name: "washflow",
+        framework: "nextjs",
+        packageManager: "npm",
+        database: "supabase",
+        styling: "none",
+      },
+      "/workspaces",
+    );
+
+    expect(context.orm).toBe("prisma");
+  });
+
+  test("maps no database to no ORM", () => {
     const context = createProjectContext(
       {
         name: "washflow",
         framework: "nextjs",
         packageManager: "npm",
         database: "none",
-        orm: "drizzle",
         styling: "none",
       },
       "/workspaces",
     );
 
     expect(context.orm).toBe("none");
+  });
+
+  test("rejects impossible database and ORM combinations", () => {
+    expect(() =>
+      assertValidDatabaseConfig({ database: "none", orm: "prisma" }),
+    ).toThrow("none requires no ORM");
+    expect(() =>
+      assertValidDatabaseConfig({ database: "supabase", orm: "none" }),
+    ).toThrow("supabase requires Prisma");
   });
 
   test("rejects an invalid name when creating the context", () => {
@@ -65,7 +88,6 @@ describe("project configuration", () => {
           framework: "nextjs",
           packageManager: "bun",
           database: "none",
-          orm: "none",
           styling: "none",
         },
         "/workspaces",

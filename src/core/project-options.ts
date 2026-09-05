@@ -1,7 +1,6 @@
 import type {
-  Database,
+  DatabaseId,
   Framework,
-  Orm,
   PackageManagerId,
   Styling,
 } from "../types/project-context.ts";
@@ -20,14 +19,7 @@ export const PROJECT_OPTIONS = {
     { value: "yarn", label: "yarn" },
   ],
   databases: [
-    { value: "mysql", label: "MySQL" },
-    { value: "postgresql", label: "PostgreSQL" },
-    { value: "sqlite", label: "SQLite" },
-    { value: "none", label: "None" },
-  ],
-  orms: [
-    { value: "prisma", label: "Prisma" },
-    { value: "drizzle", label: "Drizzle" },
+    { value: "supabase", label: "Supabase" },
     { value: "none", label: "None" },
   ],
   styling: [
@@ -37,8 +29,7 @@ export const PROJECT_OPTIONS = {
 } as const satisfies {
   readonly frameworks: readonly ProjectOption<Framework>[];
   readonly packageManagers: readonly ProjectOption<PackageManagerId>[];
-  readonly databases: readonly ProjectOption<Database>[];
-  readonly orms: readonly ProjectOption<Orm>[];
+  readonly databases: readonly ProjectOption<DatabaseId>[];
   readonly styling: readonly ProjectOption<Styling>[];
 };
 
@@ -48,3 +39,8 @@ export function getOptionLabel<Value extends string>(
 ): string {
   return options.find((option) => option.value === value)?.label ?? value;
 }
+
+export const ORM_LABELS = {
+  prisma: "Prisma",
+  none: "None",
+} as const;
