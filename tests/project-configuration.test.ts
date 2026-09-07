@@ -8,9 +8,24 @@ import {
 
 describe("project configuration", () => {
   test("validates project names", () => {
-    expect(validateProjectName("washflow")).toBeUndefined();
-    expect(validateProjectName("wash-flow-2")).toBeUndefined();
-    expect(validateProjectName("")).toBe("Project name is required.");
+    for (const name of ["washflow", "my-app", "stackinit-demo", "project123"]) {
+      expect(validateProjectName(name)).toBeUndefined();
+    }
+    for (const name of [
+      "",
+      ".",
+      "..",
+      "../test",
+      "../../test",
+      "/path",
+      "test/",
+      "my_app",
+      "project\u0000name",
+      "node_modules",
+      "favicon.ico",
+    ]) {
+      expect(validateProjectName(name)).toBeDefined();
+    }
     expect(validateProjectName("WashFlow")).toBe(
       "Project name must be lowercase.",
     );

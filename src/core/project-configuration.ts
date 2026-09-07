@@ -27,6 +27,9 @@ export function validateProjectName(value: string | undefined): string | undefin
   if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(name)) {
     return "Use only lowercase letters, numbers, and hyphens; do not start or end with a hyphen.";
   }
+  if (name === "node_modules" || name === "favicon.ico") {
+    return `Project name "${name}" is reserved. Choose another project name.`;
+  }
 
   return undefined;
 }

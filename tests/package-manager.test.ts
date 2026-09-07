@@ -185,6 +185,24 @@ describe("CommandPackageManager", () => {
   });
 
   test.each([
+    ["bun", false, "bun add zod"],
+    ["bun", true, "bun add -d zod"],
+    ["npm", false, "npm install zod"],
+    ["npm", true, "npm install -D zod"],
+    ["pnpm", false, "pnpm add zod"],
+    ["pnpm", true, "pnpm add -D zod"],
+    ["yarn", false, "yarn add zod"],
+    ["yarn", true, "yarn add -D zod"],
+  ] as const)("formats %s add commands", (id, development, expected) => {
+    const packageManager = new CommandPackageManager(
+      id,
+      new RecordingCommandRunner(),
+    );
+
+    expect(packageManager.formatAddCommand(["zod"], development)).toBe(expected);
+  });
+
+  test.each([
     ["bun", "bunx prisma migrate dev"],
     ["npm", "npx prisma migrate dev"],
     ["pnpm", "pnpm exec prisma migrate dev"],

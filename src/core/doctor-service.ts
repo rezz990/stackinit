@@ -8,6 +8,7 @@ import { prismaDoctor } from "../adapters/prisma-doctor.ts";
 import { projectDoctor } from "../adapters/project-doctor.ts";
 import { supabaseDoctor } from "../adapters/supabase-doctor.ts";
 import type { CommandRunner } from "./command-runner.ts";
+import { AdapterRegistry } from "./adapter-registry.ts";
 import { findProjectRoot, readConfig } from "./config-service.ts";
 import {
   createDoctorReport,
@@ -71,13 +72,15 @@ export async function runDoctor(
 }
 
 export function createDoctorChecks(config: StackInitConfig): readonly DoctorCheck[] {
-  return [
+  const registeredChecks = [
     projectDoctor,
     packageManagerDoctor,
     nextjsDoctor,
     ...(config.database === "supabase" ? [supabaseDoctor] : []),
     ...(config.orm === "prisma" ? [prismaDoctor] : []),
   ];
+  const registry = new AdapterRegistry<DoctorCheck>(registeredChecks);
+  return registeredChecks.map((check) => registry.get(check.id));
 }
 
 async function readPackageJson(

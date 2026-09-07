@@ -30,6 +30,8 @@ describe("stackinit CLI", () => {
     expect(output).toContain("Usage: stackinit [options] [command]");
     expect(output).toContain("Bootstrap and manage modern application stacks.");
     expect(output).toContain("create [project-name]");
+    expect(output).toContain("info");
+    expect(output).toContain("doctor");
   });
 
   test("shows the package version", () => {

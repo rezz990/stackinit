@@ -6,9 +6,11 @@ import { NextjsAdapter } from "../adapters/nextjs-adapter.ts";
 import { createPackageManager } from "../adapters/package-manager.ts";
 import { PrismaAdapter } from "../adapters/prisma-adapter.ts";
 import { supabaseAdapter } from "../adapters/supabase-adapter.ts";
-import { createProject } from "../core/create-project.ts";
-import { writeConfig } from "../core/config-service.ts";
-import { createProjectManifest } from "../core/project-manifest.ts";
+import {
+  ProjectSetupError,
+  setupProject,
+  type ProjectSetupStage,
+} from "../core/project-setup.ts";
 import {
   createProjectContext,
   validateProjectName,
@@ -35,7 +37,7 @@ function wasCancelled(value: unknown): value is symbol {
 export async function promptForProjectContext(
   suppliedName: string | undefined,
   baseDirectory: string,
-): Promise<ProjectContext | undefined> {
+): Promise<ProjectPromptResult> {
   prompts.intro("StackInit");
 
   let name: string;
@@ -45,13 +47,13 @@ export async function promptForProjectContext(
       placeholder: "my-app",
       validate: validateProjectName,
     });
-    if (wasCancelled(promptedName)) return undefined;
+    if (wasCancelled(promptedName)) return { status: "cancelled" };
     name = promptedName;
   } else {
     const validationError = validateProjectName(suppliedName);
     if (validationError !== undefined) {
       prompts.cancel(validationError);
-      return undefined;
+      return { status: "invalid" };
     }
     name = suppliedName;
   }
@@ -60,40 +62,47 @@ export async function promptForProjectContext(
     message: "Framework",
     options: [...PROJECT_OPTIONS.frameworks],
   });
-  if (wasCancelled(framework)) return undefined;
+  if (wasCancelled(framework)) return { status: "cancelled" };
 
   const packageManager = await prompts.select<PackageManagerId>({
     message: "Package manager",
     options: [...PROJECT_OPTIONS.packageManagers],
   });
-  if (wasCancelled(packageManager)) return undefined;
+  if (wasCancelled(packageManager)) return { status: "cancelled" };
 
   const database = await prompts.select<DatabaseId>({
     message: "Database",
     options: [...PROJECT_OPTIONS.databases],
   });
-  if (wasCancelled(database)) return undefined;
+  if (wasCancelled(database)) return { status: "cancelled" };
 
   const styling = await prompts.select<Styling>({
     message: "Styling",
     options: [...PROJECT_OPTIONS.styling],
   });
-  if (wasCancelled(styling)) return undefined;
+  if (wasCancelled(styling)) return { status: "cancelled" };
 
   const confirmed = await prompts.confirm({
     message: "Use this configuration?",
   });
-  if (wasCancelled(confirmed)) return undefined;
+  if (wasCancelled(confirmed)) return { status: "cancelled" };
   if (!confirmed) {
     prompts.cancel("Project configuration was not confirmed.");
-    return undefined;
+    return { status: "cancelled" };
   }
 
-  return createProjectContext(
-    { name, framework, packageManager, database, styling },
-    baseDirectory,
-  );
+  return {
+    status: "ready",
+    context: createProjectContext(
+      { name, framework, packageManager, database, styling },
+      baseDirectory,
+    ),
+  };
 }
+
+export type ProjectPromptResult =
+  | { readonly status: "ready"; readonly context: ProjectContext }
+  | { readonly status: "cancelled" | "invalid" };
 
 export function formatProjectSummary(context: ProjectContext): string {
   return [
@@ -111,42 +120,41 @@ export function registerCreateCommand(program: Command): void {
     .command("create [project-name]")
     .description("Configure a new project")
     .action(async (projectName: string | undefined) => {
-      const context = await promptForProjectContext(projectName, process.cwd());
-      if (context === undefined) return;
+      const promptResult = await promptForProjectContext(
+        projectName,
+        process.cwd(),
+      );
+      if (promptResult.status !== "ready") {
+        if (promptResult.status === "invalid") process.exitCode = 1;
+        return;
+      }
+      const { context } = promptResult;
 
       prompts.note(formatProjectSummary(context), "StackInit");
       const progress = prompts.spinner();
-      progress.start("Creating project...");
-      let nextjsCreated = false;
-      let failureLabel = "Project creation failed";
 
       try {
         const packageManager = createPackageManager(
           context.packageManager,
           new ExecaCommandRunner(),
         );
-        await createProject(context, new NextjsAdapter(packageManager));
-        nextjsCreated = true;
-        progress.stop("Next.js project created");
+        await setupProject(context, {
+          frameworkAdapter: new NextjsAdapter(packageManager),
+          ...(context.orm === "prisma"
+            ? {
+                ormAdapter: new PrismaAdapter(
+                  packageManager,
+                  supabaseAdapter,
+                ),
+              }
+            : {}),
+          observer: {
+            start: (stage) => progress.start(stageStartMessage(stage)),
+            complete: (stage) => progress.stop(stageCompleteMessage(stage)),
+          },
+        });
 
         if (context.database === "supabase") {
-          failureLabel = "Prisma setup failed";
-          const prismaAdapter = new PrismaAdapter(
-            packageManager,
-            supabaseAdapter,
-          );
-          progress.start("Installing Prisma dependencies...");
-          await prismaAdapter.install(context);
-          progress.stop("Prisma dependencies installed");
-
-          progress.start("Configuring Prisma and Supabase...");
-          await prismaAdapter.configure(context);
-          progress.stop("Prisma and Supabase configured");
-
-          progress.start("Generating Prisma Client...");
-          await prismaAdapter.generate(context);
-          progress.stop("Prisma Client generated");
-
           prompts.note(
             [
               "1. Open your Supabase project.",
@@ -162,27 +170,56 @@ export function registerCreateCommand(program: Command): void {
           );
         }
 
-        failureLabel = "StackInit manifest could not be saved";
-        progress.start("Saving StackInit manifest...");
-        await writeConfig(
-          context.rootDirectory,
-          createProjectManifest(context),
-        );
-        progress.stop("StackInit manifest saved");
-
         prompts.outro(
           `Project ready.\n\ncd ${context.name}\n${packageManager.formatRunCommand("dev")}`,
         );
       } catch (error) {
-        progress.error(failureLabel);
+        const stage = error instanceof ProjectSetupError ? error.stage : undefined;
+        progress.error(stageFailureMessage(stage));
         const details = error instanceof Error ? error.message : "Unexpected error.";
         prompts.cancel(
-          nextjsCreated
-            ? `${failureLabel === "Prisma setup failed" ? "The project was created, but Supabase + Prisma setup could not be completed." : "The project was created, but StackInit setup could not be completed."}\n\n${details}`
+          stage !== undefined && stage !== "framework"
+            ? `${stage.startsWith("orm-") ? "The project was created, but Supabase + Prisma setup could not be completed." : "The project was created, but StackInit setup could not be completed."}\n\n${details}`
             : details,
         );
         process.exitCode = 1;
         return;
       }
     });
+}
+
+const STAGE_MESSAGES: Readonly<
+  Record<ProjectSetupStage, { readonly start: string; readonly complete: string }>
+> = {
+  framework: { start: "Creating project...", complete: "Next.js project created" },
+  "orm-dependencies": {
+    start: "Installing Prisma dependencies...",
+    complete: "Prisma dependencies installed",
+  },
+  "orm-configuration": {
+    start: "Configuring Prisma and Supabase...",
+    complete: "Prisma and Supabase configured",
+  },
+  "orm-generation": {
+    start: "Generating Prisma Client...",
+    complete: "Prisma Client generated",
+  },
+  manifest: {
+    start: "Saving StackInit manifest...",
+    complete: "StackInit manifest saved",
+  },
+};
+
+function stageStartMessage(stage: ProjectSetupStage): string {
+  return STAGE_MESSAGES[stage].start;
+}
+
+function stageCompleteMessage(stage: ProjectSetupStage): string {
+  return STAGE_MESSAGES[stage].complete;
+}
+
+function stageFailureMessage(stage: ProjectSetupStage | undefined): string {
+  if (stage === "framework" || stage === undefined) return "Project creation failed";
+  if (stage.startsWith("orm-")) return "Prisma setup failed";
+  return "StackInit manifest could not be saved";
 }
