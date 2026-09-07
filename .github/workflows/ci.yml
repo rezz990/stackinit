@@ -25,3 +25,5 @@ jobs:
       - run: node dist/index.js --help
       - run: node dist/index.js --version
       - run: npm pack --dry-run
+      - name: Smoke test installed npm package
+        run: bash scripts/smoke-packed-package.sh

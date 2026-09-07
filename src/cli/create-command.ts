@@ -15,10 +15,11 @@ import {
   createProjectContext,
   validateProjectName,
 } from "../core/project-configuration.ts";
+import { PACKAGE_MANAGER_OPTIONS } from "../core/package-manager-options.ts";
+import { getOptionLabel } from "../core/project-option.ts";
 import {
-  getOptionLabel,
   ORM_LABELS,
-  PROJECT_OPTIONS,
+  INTEGRATION_OPTIONS,
   resolveDatabaseIntegration,
 } from "../integrations/registry.ts";
 import type {
@@ -61,25 +62,25 @@ export async function promptForProjectContext(
 
   const framework = await prompts.select<Framework>({
     message: "Framework",
-    options: [...PROJECT_OPTIONS.frameworks],
+    options: [...INTEGRATION_OPTIONS.frameworks],
   });
   if (wasCancelled(framework)) return { status: "cancelled" };
 
   const packageManager = await prompts.select<PackageManagerId>({
     message: "Package manager",
-    options: [...PROJECT_OPTIONS.packageManagers],
+    options: [...PACKAGE_MANAGER_OPTIONS],
   });
   if (wasCancelled(packageManager)) return { status: "cancelled" };
 
   const database = await prompts.select<DatabaseId>({
     message: "Database",
-    options: [...PROJECT_OPTIONS.databases],
+    options: [...INTEGRATION_OPTIONS.databases],
   });
   if (wasCancelled(database)) return { status: "cancelled" };
 
   const styling = await prompts.select<Styling>({
     message: "Styling",
-    options: [...PROJECT_OPTIONS.styling],
+    options: [...INTEGRATION_OPTIONS.styling],
   });
   if (wasCancelled(styling)) return { status: "cancelled" };
 
@@ -114,11 +115,11 @@ export type ProjectPromptResult =
 export function formatProjectSummary(context: ProjectContext): string {
   return [
     `Project ${context.name}`,
-    `Framework ${getOptionLabel(PROJECT_OPTIONS.frameworks, context.framework)}`,
-    `Package Manager ${getOptionLabel(PROJECT_OPTIONS.packageManagers, context.packageManager)}`,
-    `Database ${getOptionLabel(PROJECT_OPTIONS.databases, context.database)}`,
+    `Framework ${getOptionLabel(INTEGRATION_OPTIONS.frameworks, context.framework)}`,
+    `Package Manager ${getOptionLabel(PACKAGE_MANAGER_OPTIONS, context.packageManager)}`,
+    `Database ${getOptionLabel(INTEGRATION_OPTIONS.databases, context.database)}`,
     `ORM ${ORM_LABELS[context.orm]}`,
-    `Styling ${getOptionLabel(PROJECT_OPTIONS.styling, context.styling)}`,
+    `Styling ${getOptionLabel(INTEGRATION_OPTIONS.styling, context.styling)}`,
   ].join("\n");
 }
 
