@@ -50,6 +50,13 @@ class RecordingPackageManager implements PackageManager {
   formatRunCommand(script: string): string {
     return `test run ${script}`;
   }
+
+  formatExecuteCommand(
+    binaryName: string,
+    arguments_: readonly string[],
+  ): string {
+    return ["test", binaryName, ...arguments_].join(" ");
+  }
 }
 
 function context(

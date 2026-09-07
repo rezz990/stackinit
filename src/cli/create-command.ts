@@ -144,8 +144,17 @@ export function registerCreateCommand(program: Command): void {
           progress.stop("Prisma Client generated");
 
           prompts.note(
-            "Add your Supabase connection strings to .env:\n\nDATABASE_URL\nDIRECT_URL",
-            "Supabase configuration required",
+            [
+              "1. Open your Supabase project.",
+              "2. Copy the pooled runtime database URL.",
+              "3. Set DATABASE_URL in .env.",
+              "4. Copy the direct or session database URL.",
+              "5. Set DIRECT_URL in .env.",
+              "",
+              "Then run:",
+              packageManager.formatExecuteCommand("prisma", ["migrate", "dev"]),
+            ].join("\n"),
+            "Supabase setup",
           );
         }
 

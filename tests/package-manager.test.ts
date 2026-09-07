@@ -183,4 +183,20 @@ describe("CommandPackageManager", () => {
       "npm run dev",
     );
   });
+
+  test.each([
+    ["bun", "bunx prisma migrate dev"],
+    ["npm", "npx prisma migrate dev"],
+    ["pnpm", "pnpm exec prisma migrate dev"],
+    ["yarn", "yarn exec prisma migrate dev"],
+  ] as const)("formats %s Prisma instructions", (id, expected) => {
+    const packageManager = new CommandPackageManager(
+      id,
+      new RecordingCommandRunner(),
+    );
+
+    expect(
+      packageManager.formatExecuteCommand("prisma", ["migrate", "dev"]),
+    ).toBe(expected);
+  });
 });

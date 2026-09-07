@@ -60,6 +60,13 @@ class RecordingPackageManager implements PackageManager {
   formatRunCommand(script: string): string {
     return `bun run ${script}`;
   }
+
+  formatExecuteCommand(
+    binaryName: string,
+    arguments_: readonly string[],
+  ): string {
+    return ["bunx", binaryName, ...arguments_].join(" ");
+  }
 }
 
 const temporaryDirectories: string[] = [];
@@ -76,6 +83,10 @@ async function fixture(): Promise<{ root: string; context: ProjectContext }> {
   const root = await mkdtemp(join(tmpdir(), "stackinit-prisma-"));
   temporaryDirectories.push(root);
   await mkdir(join(root, "src"), { recursive: true });
+  await writeFile(
+    join(root, "package.json"),
+    `${JSON.stringify({ scripts: { dev: "next dev" } }, null, 2)}\n`,
+  );
   return {
     root,
     context: {
@@ -129,6 +140,14 @@ describe("PrismaAdapter", () => {
     expect(client).toContain('from "@prisma/adapter-pg"');
     expect(client).toContain("process.env.DATABASE_URL");
     expect(client).toContain("globalForPrisma.prisma");
+    expect(client).toContain("requirePostgresqlUrl");
+
+    const urlUtility = await readFile(
+      join(root, "src", "lib", "database-url.ts"),
+      "utf8",
+    );
+    expect(urlUtility).toContain('url.protocol === "postgres:"');
+    expect(urlUtility).toContain("Invalid ${variable} format.");
 
     const environment = await readFile(join(root, ".env.example"), "utf8");
     expect(environment).toContain("EXISTING_VALUE=kept");
@@ -144,12 +163,28 @@ describe("PrismaAdapter", () => {
     );
     expect(gitignore).toContain(".env");
     expect(gitignore).toContain("!.env.example");
+
+    const packageJson: unknown = JSON.parse(
+      await readFile(join(root, "package.json"), "utf8"),
+    );
+    expect(packageJson).toEqual({
+      scripts: {
+        dev: "next dev",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:studio": "prisma studio",
+      },
+    });
   });
 
   test("does not overwrite an existing .env or duplicate template keys", async () => {
     const { context, root } = await fixture();
     await writeFile(join(root, ".env"), "PRIVATE_EXISTING_VALUE=preserved\n");
     await writeFile(join(root, ".env.example"), 'DATABASE_URL="custom"\n');
+    await writeFile(
+      join(root, "package.json"),
+      `${JSON.stringify({ scripts: { "db:migrate": "custom-command" } })}\n`,
+    );
     const adapter = new PrismaAdapter(
       new RecordingPackageManager(),
       supabaseAdapter,
@@ -164,6 +199,20 @@ describe("PrismaAdapter", () => {
     const template = await readFile(join(root, ".env.example"), "utf8");
     expect(template.match(/^DATABASE_URL=/gm)).toHaveLength(1);
     expect(template.match(/^DIRECT_URL=/gm)).toHaveLength(1);
+    const packageJson = JSON.parse(
+      await readFile(join(root, "package.json"), "utf8"),
+    ) as { scripts: Record<string, string> };
+    expect(packageJson.scripts["db:migrate"]).toBe("custom-command");
+    expect(Object.keys(packageJson.scripts)).toHaveLength(3);
+
+    const clientBefore = await readFile(
+      join(root, "src", "lib", "prisma.ts"),
+      "utf8",
+    );
+    await adapter.configure(context);
+    expect(await readFile(join(root, "src", "lib", "prisma.ts"), "utf8")).toBe(
+      clientBefore,
+    );
   });
 
   test("propagates failed dependency installation", async () => {

@@ -77,6 +77,15 @@ const LOCAL_EXEC_ARGUMENTS: Readonly<Record<PackageManagerId, readonly string[]>
   yarn: ["exec"],
 };
 
+const DISPLAY_EXEC_ARGUMENTS: Readonly<
+  Record<PackageManagerId, readonly string[]>
+> = {
+  bun: [],
+  npm: [],
+  pnpm: ["exec"],
+  yarn: ["exec"],
+};
+
 export class PackageManagerUnavailableError extends Error {
   constructor(readonly packageManagerId: PackageManagerId) {
     super(
@@ -196,6 +205,18 @@ export class CommandPackageManager implements PackageManager {
 
   formatRunCommand(script: string): string {
     return [EXECUTABLES[this.id], ...this.#commands.run, script].join(" ");
+  }
+
+  formatExecuteCommand(
+    binaryName: string,
+    arguments_: readonly string[],
+  ): string {
+    return [
+      EXEC_EXECUTABLES[this.id],
+      ...DISPLAY_EXEC_ARGUMENTS[this.id],
+      binaryName,
+      ...arguments_,
+    ].join(" ");
   }
 
   async #execute(

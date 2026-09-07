@@ -31,4 +31,6 @@ and confirming the project configuration, the `create` command runs the official
 When Supabase is selected, StackInit configures Prisma 7 with PostgreSQL,
 creates a reusable Prisma Client, and adds safe `DATABASE_URL` and `DIRECT_URL`
 placeholders. Replace those placeholders in the generated project's `.env`
-before using database functionality.
+before using database functionality. Generated projects also include
+`db:generate`, `db:migrate`, and `db:studio` scripts without replacing scripts
+that already exist.

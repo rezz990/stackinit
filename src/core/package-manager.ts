@@ -22,6 +22,10 @@ export interface PackageManager {
     options?: PackageManagerExecutionOptions,
   ): Promise<void>;
   formatRunCommand(script: string): string;
+  formatExecuteCommand(
+    binaryName: string,
+    arguments_: readonly string[],
+  ): string;
 }
 
 export interface PackageManagerExecutionOptions {

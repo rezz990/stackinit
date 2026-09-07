@@ -44,11 +44,12 @@ export default defineConfig({
 const PRISMA_CLIENT = `import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
-const connectionString = process.env.DATABASE_URL;
+import { requirePostgresqlUrl } from "./database-url";
 
-if (!connectionString) {
-  throw new Error("DATABASE_URL is not configured.");
-}
+const connectionString = requirePostgresqlUrl(
+  process.env.DATABASE_URL,
+  "DATABASE_URL",
+);
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -64,14 +65,46 @@ if (process.env.NODE_ENV !== "production") {
 }
 `;
 
-const ENV_TEMPLATE = `# Runtime Prisma connection.
-# For serverless deployments, use the Supabase transaction pooler connection.
+const DATABASE_URL_UTILITY = `type DatabaseUrlVariable = "DATABASE_URL" | "DIRECT_URL";
+
+export function requirePostgresqlUrl(
+  value: string | undefined,
+  variable: DatabaseUrlVariable,
+): string {
+  try {
+    if (value === undefined) throw new Error();
+    const url = new URL(value);
+    const databaseName = decodeURIComponent(url.pathname.slice(1));
+    const validProtocol =
+      url.protocol === "postgres:" || url.protocol === "postgresql:";
+    const validDatabase =
+      databaseName.length > 0 &&
+      databaseName !== "." &&
+      databaseName !== ".." &&
+      !databaseName.includes("/");
+
+    if (!validProtocol || url.hostname.length === 0 || !validDatabase) {
+      throw new Error();
+    }
+    return value;
+  } catch {
+    throw new Error(\`Invalid \${variable} format.\`);
+  }
+}
+`;
+
+const ENV_TEMPLATE = `# Prisma runtime: use a pooled Supabase connection when appropriate.
 DATABASE_URL="YOUR_SUPABASE_POOLED_DATABASE_URL"
 
-# Prisma CLI connection used for migrations and introspection.
-# Use a direct or suitable Supabase session connection.
+# Prisma CLI: use a direct or session connection for migrations and introspection.
 DIRECT_URL="YOUR_SUPABASE_DIRECT_DATABASE_URL"
 `;
+
+const PRISMA_SCRIPTS = {
+  "db:generate": "prisma generate",
+  "db:migrate": "prisma migrate dev",
+  "db:studio": "prisma studio",
+} as const;
 
 export class PrismaAdapter implements OrmAdapter {
   readonly id = "prisma";
@@ -102,10 +135,15 @@ export class PrismaAdapter implements OrmAdapter {
     await writeFile(join(root, "prisma", "schema.prisma"), PRISMA_SCHEMA);
     await writeFile(join(root, "prisma.config.ts"), PRISMA_CONFIG);
     await writeFile(join(root, "src", "lib", "prisma.ts"), PRISMA_CLIENT);
+    await writeFile(
+      join(root, "src", "lib", "database-url.ts"),
+      DATABASE_URL_UTILITY,
+    );
     await mergeEnvironmentTemplate(join(root, ".env.example"));
     await createEnvironmentFileIfMissing(join(root, ".env"));
     await ensureGitignoreEntry(join(root, ".gitignore"), ".env");
     await ensureGitignoreEntry(join(root, ".gitignore"), "!.env.example");
+    await mergePackageScripts(join(root, "package.json"));
   }
 
   async generate(context: ProjectContext): Promise<void> {
@@ -196,4 +234,24 @@ function isFileExistsError(error: unknown): boolean {
     "code" in error &&
     (error as Error & { readonly code?: unknown }).code === "EEXIST"
   );
+}
+
+async function mergePackageScripts(path: string): Promise<void> {
+  const contents = await readFile(path, "utf8");
+  const parsed: unknown = JSON.parse(contents);
+  if (!isRecord(parsed)) {
+    throw new Error("Cannot update package.json: expected a JSON object.");
+  }
+
+  const existingScripts = isRecord(parsed.scripts) ? parsed.scripts : {};
+  const scripts: Record<string, unknown> = { ...existingScripts };
+  for (const [name, command] of Object.entries(PRISMA_SCRIPTS)) {
+    if (!(name in scripts)) scripts[name] = command;
+  }
+
+  await writeFile(path, `${JSON.stringify({ ...parsed, scripts }, null, 2)}\n`);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
