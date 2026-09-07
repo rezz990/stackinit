@@ -2,8 +2,8 @@ import type { Command } from "commander";
 
 import { readConfig } from "../core/config-service.ts";
 import type { StackInitConfig } from "../core/stackinit-config.ts";
-import { ORM_LABELS, PROJECT_OPTIONS } from "../core/project-options.ts";
-import { getOptionLabel } from "../core/project-options.ts";
+import { ORM_LABELS, PROJECT_OPTIONS } from "../integrations/registry.ts";
+import { getOptionLabel } from "../integrations/registry.ts";
 import { Logger } from "../utils/logger.ts";
 
 export function formatProjectInfo(config: StackInitConfig): string {

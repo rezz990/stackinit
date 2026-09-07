@@ -1,7 +1,7 @@
 {
   "name": "stackinit",
   "version": "0.1.0",
-  "description": "CLI for creating and validating Next.js projects with optional Supabase and Prisma integration.",
+  "description": "A modular CLI for scaffolding and validating modern application stacks.",
   "type": "module",
   "bin": {
     "stackinit": "dist/index.js"
@@ -12,6 +12,7 @@
   "scripts": {
     "build": "bun build src/index.ts --target=node --outfile=dist/index.js",
     "prepack": "bun run build",
+    "prepublishOnly": "bun run typecheck && bun test",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
@@ -20,11 +21,22 @@
   },
   "keywords": [
     "cli",
+    "developer-tools",
     "nextjs",
+    "project-generator",
     "prisma",
+    "scaffolding",
     "supabase",
-    "scaffolding"
+    "typescript"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rezz990/stackinit.git"
+  },
+  "homepage": "https://github.com/rezz990/stackinit#readme",
+  "bugs": {
+    "url": "https://github.com/rezz990/stackinit/issues"
+  },
   "publishConfig": {
     "access": "public"
   },

@@ -10,13 +10,12 @@ import type {
   Styling,
 } from "../types/project-context.ts";
 
-export interface ProjectConfiguration {
+export type ProjectConfiguration = DatabaseConfig & {
   readonly name: string;
   readonly framework: Framework;
   readonly packageManager: PackageManagerId;
-  readonly database: DatabaseId;
   readonly styling: Styling;
-}
+};
 
 export function validateProjectName(value: string | undefined): string | undefined {
   const name = value?.trim() ?? "";
@@ -42,16 +41,10 @@ export function createProjectContext(
   const validationError = validateProjectName(name);
   if (validationError !== undefined) throw new Error(validationError);
 
-  const databaseConfig: DatabaseConfig =
-    configuration.database === "supabase"
-      ? { database: "supabase", orm: "prisma" }
-      : { database: "none", orm: "none" };
-
   return {
     ...configuration,
     name,
     rootDirectory: resolve(baseDirectory, name),
-    ...databaseConfig,
   };
 }
 

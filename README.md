@@ -1,51 +1,72 @@
 # StackInit
 
-## What is StackInit?
+StackInit is a modular CLI for scaffolding and validating modern application
+stacks. v0.1 ships with Next.js project generation and optional Supabase +
+Prisma integration.
 
-StackInit is a CLI for creating an opinionated Next.js application and optionally
-configuring Supabase PostgreSQL with Prisma. It records completed setup in a
-validated project manifest and provides local project diagnostics.
+> StackInit v0.1 is not yet published to npm. The registry commands below show
+> the intended usage after publication; use the local-development instructions
+> when working from this repository.
 
-## Features
+## Why StackInit?
 
-- Interactive, non-destructive project configuration
-- Official `create-next-app` scaffolding
-- Optional Supabase + Prisma setup with safe environment placeholders
-- `.stackinit.json` project manifest
-- Local `info` and `doctor` commands
-- Bun, npm, pnpm, and Yarn package-manager support
+StackInit turns a small set of project choices into a reproducible scaffold. It
+uses official generators, keeps technology-specific setup in built-in
+integrations, records completed work in a manifest, and diagnoses the resulting
+project locally. StackInit itself has no database requirement.
 
-## Supported Stack
+## Quick Start
 
-| Area | Supported options |
-| --- | --- |
-| Framework | Next.js |
-| Database | Supabase, None |
-| ORM | Prisma with Supabase, None without a database |
-| Styling | Tailwind CSS, None |
-| Package manager | Bun, npm, pnpm, Yarn 2+ for downloaded executables |
-
-Supabase always uses Prisma in StackInit v0.1. Selecting no database also selects
-no ORM.
-
-## Installation
-
-StackInit requires Node.js 22.12 or newer. After the package is published, it can
-be run with either npm or Bun:
+After publication, the same npm package can be launched by different package
+runners:
 
 ```bash
-npx stackinit --help
-bunx stackinit --help
+npx stackinit create my-app
+bunx stackinit create my-app
 ```
 
-To test a local checkout instead, install dependencies and run the source:
+For a local checkout:
 
 ```bash
 bun install
-bun run src/index.ts --help
+bun run src/index.ts create my-app
 ```
 
-## Usage
+## What StackInit Does
+
+- Collects and validates project configuration interactively.
+- Uses the official `create-next-app` generator with non-interactive arguments.
+- Optionally configures the built-in Supabase + Prisma integration.
+- Writes `.stackinit.json` only after every required setup stage succeeds.
+- Provides read-only `info` and local-only `doctor` commands.
+- Refuses unsafe project names and non-empty destinations.
+
+## Built-in Integrations
+
+StackInit v0.1 supports exactly:
+
+```text
+Framework
+└── Next.js
+
+Styling
+├── Tailwind CSS
+└── None
+
+Database
+├── Supabase
+└── None
+
+ORM
+├── Prisma
+└── None
+```
+
+Selecting Supabase automatically selects Prisma in v0.1. This is an
+opinionated compatibility relationship between two built-in integrations, not
+a database dependency of the StackInit CLI.
+
+## Commands
 
 ```text
 stackinit --help
@@ -61,72 +82,98 @@ stackinit doctor
 stackinit create my-app
 ```
 
-StackInit validates the project name, refuses to overwrite a non-empty
-destination, collects the supported stack options, and invokes the official
-Next.js generator without shell-composed user input. A `.stackinit.json`
-manifest is written only after every required setup stage succeeds.
+Choose Next.js, styling, database, and the package manager for the **generated
+project**. StackInit then invokes the official generator using argument arrays,
+never a shell-composed project name. It does not overwrite a non-empty
+destination.
 
-## Supabase + Prisma
+## Supabase + Prisma Integration
 
-StackInit does **not** create or connect to a Supabase project. When Supabase is
-selected, the generated project includes a PostgreSQL Prisma schema,
-`prisma.config.ts`, a reusable Prisma Client module, and concise environment
-placeholders.
+When Supabase is selected, the generated application receives a PostgreSQL
+Prisma schema, `prisma.config.ts`, a reusable runtime Prisma Client,
+`.env.example`, safe `.env` ignore rules, and database convenience scripts.
 
-Set these values in the generated `.env`:
+Add credentials to the generated `.env` yourself:
 
-- `DATABASE_URL`: the pooled connection used by the application at runtime.
-- `DIRECT_URL`: the direct or session connection used by Prisma CLI operations
-  such as migrations and introspection.
+- `DATABASE_URL` is the pooled application/runtime connection.
+- `DIRECT_URL` is the direct or session connection for Prisma CLI migrations
+  and introspection.
 
-Do not commit real connection strings. The generated `.env` is ignored, while
-`.env.example` remains safe to commit. Convenience scripts include
-`db:generate`, `db:migrate`, and `db:studio`.
+StackInit does not create Supabase accounts or cloud projects, store database
+credentials, connect to production databases, or run remote migrations.
+
+## Project Manifest
+
+After successful generation, `.stackinit.json` records the framework, styling,
+database, ORM, and selected project package manager. Its versioned Zod schema
+rejects unsupported combinations. The manifest never contains credentials.
 
 ## `stackinit info`
 
-Run `stackinit info` from the project root or a nested directory to display the
-validated manifest using friendly names. The output never includes database
-URLs or credentials.
+Run `stackinit info` from a managed project root or nested directory to display
+the validated stack using friendly labels. It never displays environment URLs
+or secrets.
 
 ## `stackinit doctor`
 
-`stackinit doctor` performs local-only checks for the manifest, `package.json`,
-installed dependencies, selected package manager, Next.js configuration, and—if
-selected—Supabase environment variables and Prisma files/package versions. It
-does not contact Supabase or execute SQL.
+`stackinit doctor` aggregates core project checks with checks owned by the
+selected Next.js, Supabase, and Prisma integrations. It inspects local files,
+dependencies, package versions, environment structure, and package-manager
+availability without contacting Supabase or executing SQL.
 
-Warnings retain exit code `0`; one or more errors produce exit code `1`. Doctor
-does not repair files automatically.
+Warnings preserve exit code `0`; any error produces exit code `1`. Doctor is
+read-only and does not repair the project.
+
+## Package Manager Support
+
+The command used to **run StackInit** (`npx`, `bunx`, or `pnpm dlx`) is separate
+from the package manager selected for the generated project. Generated projects
+can use Bun, npm, pnpm, or modern Yarn. That selection controls generator,
+dependency, script, and diagnostic commands recorded for the project.
 
 ## Development
+
+Development uses Bun, while the published executable targets Node.js 22.12 or
+newer:
 
 ```bash
 bun install
 bun run typecheck
 bun test
 bun run build
+node dist/index.js --help
 ```
 
-The build targets Node.js and produces `dist/index.js` with a Node shebang. The
-npm package includes the built CLI, README, license, and package metadata; tests,
-source files, local environment files, and `node_modules` are excluded.
+`dist/index.js` is a self-contained Node-targeted executable with a Node
+shebang. The npm package contains the built CLI and package documentation, not
+source tests, environment files, `node_modules`, or generated test projects.
 
 ## Architecture
 
-- `src/cli`: Commander commands and terminal presentation
-- `src/core`: configuration, manifests, orchestration, registries, and contracts
-- `src/adapters`: Next.js, Supabase, Prisma, package-manager, and doctor adapters
-- `src/types`: shared project context types
-- `src/utils`: small reusable utilities
-- `tests`: Bun unit and filesystem integration tests
+- **CLI** collects intent and presents progress, results, and actionable errors.
+- **Core** owns contracts, validation, orchestration, manifests, and doctor
+  result aggregation without installing integration-specific dependencies.
+- **Built-in integrations** own Next.js generation, Supabase metadata and
+  environment checks, Prisma setup/checks, and the v0.1 compatibility registry.
+- **Infrastructure/adapters** implement command execution and concrete package
+  manager behavior behind mockable core contracts.
+- **Manifest** records only the stack that completed successfully.
+- **Doctor** combines core checks with registered integration checks.
 
-Commands use argument arrays through the command-runner abstraction rather than
-building raw shell commands.
+This separation allows future technologies to be added through internal
+registries and adapters rather than embedding their setup in CLI handlers.
+There is no external plugin loader in v0.1.
+
+## Current Limitations
+
+- Only Next.js is generated in v0.1.
+- Supabase is the only database integration and is paired with Prisma.
+- Supabase provisioning, credentials, and remote operations remain manual.
+- Yarn support targets modern Yarn's downloaded-executable workflow.
+- StackInit has not yet been published to npm.
 
 ## Roadmap
 
-The following are possible future additions and are **not implemented** in
-v0.1: `stackinit add`, `stackinit remove`, upgrade workflows, doctor repair,
-Supabase Auth/Storage, Redis, Docker, Better Auth, additional frameworks, and
-third-party adapters.
+Possible future work—not implemented in v0.1—includes additional frameworks and
+databases, Drizzle, `stackinit add`/`remove`/`upgrade`, doctor repair, Supabase
+Auth and Storage, Redis, Docker, Better Auth, and third-party adapters.

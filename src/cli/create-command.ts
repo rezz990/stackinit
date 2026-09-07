@@ -19,7 +19,8 @@ import {
   getOptionLabel,
   ORM_LABELS,
   PROJECT_OPTIONS,
-} from "../core/project-options.ts";
+  resolveDatabaseIntegration,
+} from "../integrations/registry.ts";
 import type {
   DatabaseId,
   Framework,
@@ -94,7 +95,13 @@ export async function promptForProjectContext(
   return {
     status: "ready",
     context: createProjectContext(
-      { name, framework, packageManager, database, styling },
+      {
+        name,
+        framework,
+        packageManager,
+        styling,
+        ...resolveDatabaseIntegration(database),
+      },
       baseDirectory,
     ),
   };

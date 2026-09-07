@@ -40,6 +40,7 @@ describe("project configuration", () => {
         framework: "nextjs",
         packageManager: "bun",
         database: "supabase",
+        orm: "prisma",
         styling: "tailwind",
       },
       "/workspaces",
@@ -54,36 +55,6 @@ describe("project configuration", () => {
       orm: "prisma",
       styling: "tailwind",
     });
-  });
-
-  test("maps Supabase to Prisma", () => {
-    const context = createProjectContext(
-      {
-        name: "washflow",
-        framework: "nextjs",
-        packageManager: "npm",
-        database: "supabase",
-        styling: "none",
-      },
-      "/workspaces",
-    );
-
-    expect(context.orm).toBe("prisma");
-  });
-
-  test("maps no database to no ORM", () => {
-    const context = createProjectContext(
-      {
-        name: "washflow",
-        framework: "nextjs",
-        packageManager: "npm",
-        database: "none",
-        styling: "none",
-      },
-      "/workspaces",
-    );
-
-    expect(context.orm).toBe("none");
   });
 
   test("rejects impossible database and ORM combinations", () => {
@@ -103,6 +74,7 @@ describe("project configuration", () => {
           framework: "nextjs",
           packageManager: "bun",
           database: "none",
+          orm: "none",
           styling: "none",
         },
         "/workspaces",
