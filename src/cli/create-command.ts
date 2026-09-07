@@ -7,6 +7,8 @@ import { createPackageManager } from "../adapters/package-manager.ts";
 import { PrismaAdapter } from "../adapters/prisma-adapter.ts";
 import { supabaseAdapter } from "../adapters/supabase-adapter.ts";
 import { createProject } from "../core/create-project.ts";
+import { writeConfig } from "../core/config-service.ts";
+import { createProjectManifest } from "../core/project-manifest.ts";
 import {
   createProjectContext,
   validateProjectName,
@@ -116,6 +118,7 @@ export function registerCreateCommand(program: Command): void {
       const progress = prompts.spinner();
       progress.start("Creating project...");
       let nextjsCreated = false;
+      let failureLabel = "Project creation failed";
 
       try {
         const packageManager = createPackageManager(
@@ -127,6 +130,7 @@ export function registerCreateCommand(program: Command): void {
         progress.stop("Next.js project created");
 
         if (context.database === "supabase") {
+          failureLabel = "Prisma setup failed";
           const prismaAdapter = new PrismaAdapter(
             packageManager,
             supabaseAdapter,
@@ -158,15 +162,23 @@ export function registerCreateCommand(program: Command): void {
           );
         }
 
+        failureLabel = "StackInit manifest could not be saved";
+        progress.start("Saving StackInit manifest...");
+        await writeConfig(
+          context.rootDirectory,
+          createProjectManifest(context),
+        );
+        progress.stop("StackInit manifest saved");
+
         prompts.outro(
           `Project ready.\n\ncd ${context.name}\n${packageManager.formatRunCommand("dev")}`,
         );
       } catch (error) {
-        progress.error(nextjsCreated ? "Prisma setup failed" : "Project creation failed");
+        progress.error(failureLabel);
         const details = error instanceof Error ? error.message : "Unexpected error.";
         prompts.cancel(
           nextjsCreated
-            ? `The project was created, but Supabase + Prisma setup could not be completed.\n\n${details}`
+            ? `${failureLabel === "Prisma setup failed" ? "The project was created, but Supabase + Prisma setup could not be completed." : "The project was created, but StackInit setup could not be completed."}\n\n${details}`
             : details,
         );
         process.exitCode = 1;

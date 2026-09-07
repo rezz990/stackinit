@@ -34,3 +34,7 @@ placeholders. Replace those placeholders in the generated project's `.env`
 before using database functionality. Generated projects also include
 `db:generate`, `db:migrate`, and `db:studio` scripts without replacing scripts
 that already exist.
+
+Successful project creation writes a validated `.stackinit.json` manifest. Run
+`stackinit info` anywhere in the project tree to display the recorded stack
+without exposing environment variables or credentials.

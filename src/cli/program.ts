@@ -2,6 +2,7 @@ import { Command } from "commander";
 
 import packageJson from "../../package.json" with { type: "json" };
 import { registerCreateCommand } from "./create-command.ts";
+import { registerInfoCommand } from "./info-command.ts";
 
 export function createProgram(): Command {
   const program = new Command()
@@ -10,5 +11,6 @@ export function createProgram(): Command {
     .version(packageJson.version);
 
   registerCreateCommand(program);
+  registerInfoCommand(program);
   return program;
 }
