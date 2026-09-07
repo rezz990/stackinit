@@ -38,3 +38,7 @@ that already exist.
 Successful project creation writes a validated `.stackinit.json` manifest. Run
 `stackinit info` anywhere in the project tree to display the recorded stack
 without exposing environment variables or credentials.
+
+Run `stackinit doctor` for local checks of the manifest, Next.js, the selected
+package manager, and—when configured—Supabase environment variables and Prisma
+files. Warnings keep exit code `0`; one or more errors produce exit code `1`.

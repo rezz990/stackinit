@@ -61,6 +61,10 @@ class RecordingPackageManager implements PackageManager {
     return `bun run ${script}`;
   }
 
+  formatAddCommand(packages: readonly string[], development = false): string {
+    return ["bun", "add", ...(development ? ["-d"] : []), ...packages].join(" ");
+  }
+
   formatExecuteCommand(
     binaryName: string,
     arguments_: readonly string[],

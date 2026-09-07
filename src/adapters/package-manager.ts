@@ -207,6 +207,14 @@ export class CommandPackageManager implements PackageManager {
     return [EXECUTABLES[this.id], ...this.#commands.run, script].join(" ");
   }
 
+  formatAddCommand(
+    packages: readonly string[],
+    development: boolean = false,
+  ): string {
+    const arguments_ = development ? this.#commands.addDev : this.#commands.add;
+    return [EXECUTABLES[this.id], ...arguments_, ...packages].join(" ");
+  }
+
   formatExecuteCommand(
     binaryName: string,
     arguments_: readonly string[],

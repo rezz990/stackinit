@@ -51,6 +51,10 @@ class RecordingPackageManager implements PackageManager {
     return `test run ${script}`;
   }
 
+  formatAddCommand(packages: readonly string[], development = false): string {
+    return ["test", "add", ...(development ? ["--dev"] : []), ...packages].join(" ");
+  }
+
   formatExecuteCommand(
     binaryName: string,
     arguments_: readonly string[],
