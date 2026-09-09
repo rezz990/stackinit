@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  assertCompatibleProjectSpec,
+  IncompatibleProjectSpecError,
+} from "../integrations/compatibility.ts";
 
 const commonManifestSchema = z.object({
   $schema: z.literal("https://stackinit.dev/schema.json"),
@@ -8,18 +12,24 @@ const commonManifestSchema = z.object({
   styling: z.array(z.literal("tailwind")).max(1),
 });
 
-export const stackInitConfigSchema = z.intersection(
-  commonManifestSchema,
-  z.discriminatedUnion("database", [
-    z.object({ database: z.literal("supabase"), orm: z.literal("prisma") }),
-    z.object({ database: z.literal("none"), orm: z.literal("none") }),
-  ]),
-).superRefine((config, context) => {
-  if (config.framework !== "nextjs" && config.database !== "none") {
+export const stackInitConfigSchema = commonManifestSchema.extend({
+  database: z.enum(["supabase", "none"]),
+  orm: z.enum(["prisma", "none"]),
+}).superRefine((config, context) => {
+  try {
+    assertCompatibleProjectSpec({
+      framework: config.framework,
+      packageManager: config.packageManager,
+      styling: config.styling.includes("tailwind") ? "tailwind" : "none",
+      database: config.database,
+      orm: config.orm,
+    });
+  } catch (error) {
+    if (!(error instanceof IncompatibleProjectSpecError)) throw error;
     context.addIssue({
       code: "custom",
-      path: ["database"],
-      message: "Client-only frameworks cannot use server database integrations.",
+      path: [error.field],
+      message: error.message,
     });
   }
 });

@@ -23,12 +23,10 @@ describe("built-in integration registry", () => {
 
   test("owns the v0.1 database and ORM compatibility policy", () => {
     expect(resolveDatabaseIntegration("nextjs", "supabase")).toEqual({
-      framework: "nextjs",
       database: "supabase",
       orm: "prisma",
     });
     expect(resolveDatabaseIntegration("react-vite", "none")).toEqual({
-      framework: "react-vite",
       database: "none",
       orm: "none",
     });

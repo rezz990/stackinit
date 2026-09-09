@@ -100,6 +100,7 @@ export async function promptForProjectContext(
     context: createProjectContext(
       {
         name,
+        framework,
         packageManager,
         styling,
         ...resolveDatabaseIntegration(framework, database),

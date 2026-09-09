@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  assertValidDatabaseConfig,
-  createProjectContext,
-  validateProjectName,
-} from "../src/core/project-configuration.ts";
+import { createProjectContext, validateProjectName } from "../src/core/project-configuration.ts";
 
 describe("project configuration", () => {
   test("validates project names", () => {
@@ -59,11 +55,25 @@ describe("project configuration", () => {
 
   test("rejects impossible database and ORM combinations", () => {
     expect(() =>
-      assertValidDatabaseConfig({ database: "none", orm: "prisma" }),
-    ).toThrow("none requires no ORM");
+      createProjectContext({
+        name: "invalid",
+        framework: "nextjs",
+        packageManager: "npm",
+        styling: "none",
+        database: "none",
+        orm: "prisma",
+      }, "/workspaces"),
+    ).toThrow("without a database cannot select an ORM");
     expect(() =>
-      assertValidDatabaseConfig({ database: "supabase", orm: "none" }),
-    ).toThrow("supabase requires Prisma");
+      createProjectContext({
+        name: "invalid",
+        framework: "nextjs",
+        packageManager: "npm",
+        styling: "none",
+        database: "supabase",
+        orm: "none",
+      }, "/workspaces"),
+    ).toThrow("supabase requires the prisma ORM integration");
   });
 
   test("rejects an invalid name when creating the context", () => {

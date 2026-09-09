@@ -4,25 +4,17 @@ export type DatabaseId = "supabase" | "none";
 export type OrmId = "prisma" | "none";
 export type Styling = "tailwind" | "none";
 
-export type DatabaseConfig =
-  | { readonly database: "supabase"; readonly orm: "prisma" }
-  | { readonly database: "none"; readonly orm: "none" };
-
-interface ProjectDetails {
-  readonly name: string;
-  readonly rootDirectory: string;
+export interface ProjectSpec {
+  readonly framework: Framework;
   readonly packageManager: PackageManagerId;
   readonly styling: Styling;
+  readonly database: DatabaseId;
+  readonly orm: OrmId;
 }
 
-export type ProjectStack =
-  (
-    | ({ readonly framework: "nextjs" } & DatabaseConfig)
-    | {
-        readonly framework: "react-vite" | "vue-vite";
-        readonly database: "none";
-        readonly orm: "none";
-      }
-  );
+interface ProjectDetails extends ProjectSpec {
+  readonly name: string;
+  readonly rootDirectory: string;
+}
 
-export type ProjectContext = ProjectDetails & ProjectStack;
+export type ProjectContext = ProjectDetails;
