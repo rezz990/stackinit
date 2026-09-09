@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  DATABASE_INTEGRATIONS,
   FRAMEWORK_INTEGRATIONS,
   INTEGRATION_OPTIONS,
+  ORM_INTEGRATIONS,
   getDatabaseOptions,
   getFrameworkIntegration,
   resolveDatabaseIntegration,
@@ -47,5 +49,15 @@ describe("built-in integration registry", () => {
     expect(integration.description).toContain("Vue");
     expect(integration.doctor.id).toBe("framework.vue-vite");
     expect(typeof integration.createAdapter).toBe("function");
+  });
+
+  test("binds database and ORM implementations by definition ID", () => {
+    const database = DATABASE_INTEGRATIONS.find(({ id }) => id === "supabase");
+    const orm = ORM_INTEGRATIONS.find(({ id }) => id === "prisma");
+
+    expect(database?.description).toContain("PostgreSQL");
+    expect(database?.doctor.id).toBe("database.supabase");
+    expect(orm?.supportedDatabases).toContain("supabase");
+    expect(orm?.doctor.id).toBe("orm.prisma");
   });
 });

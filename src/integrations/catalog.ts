@@ -71,3 +71,17 @@ export const ORM_DEFINITIONS: readonly OrmDefinition[] = [
     supportedDatabases: ["supabase"],
   },
 ];
+
+export function getDatabaseDefinition(
+  id: Exclude<DatabaseId, "none">,
+): DatabaseDefinition {
+  const definition = DATABASE_DEFINITIONS.find((candidate) => candidate.id === id);
+  if (!definition) throw new Error(`Database integration "${id}" is not registered.`);
+  return definition;
+}
+
+export function getOrmDefinition(id: Exclude<OrmId, "none">): OrmDefinition {
+  const definition = ORM_DEFINITIONS.find((candidate) => candidate.id === id);
+  if (!definition) throw new Error(`ORM integration "${id}" is not registered.`);
+  return definition;
+}

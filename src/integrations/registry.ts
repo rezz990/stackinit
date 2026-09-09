@@ -21,9 +21,9 @@ import type {
   Styling,
 } from "../types/project-context.ts";
 import {
-  DATABASE_DEFINITIONS,
   FRAMEWORK_DEFINITIONS,
-  ORM_DEFINITIONS,
+  getDatabaseDefinition,
+  getOrmDefinition,
   type FrameworkDefinition,
 } from "./catalog.ts";
 import {
@@ -65,14 +65,14 @@ export const FRAMEWORK_INTEGRATIONS: readonly FrameworkIntegration[] =
 export const DATABASE_INTEGRATIONS = [
   {
     ...supabaseAdapter,
-    ...DATABASE_DEFINITIONS[0],
+    ...getDatabaseDefinition("supabase"),
     doctor: supabaseDoctor,
   },
 ] as const;
 
 export const ORM_INTEGRATIONS = [
   {
-    ...ORM_DEFINITIONS[0],
+    ...getOrmDefinition("prisma"),
     doctor: prismaDoctor,
     createAdapter: (packageManager: PackageManager): OrmAdapter =>
       new PrismaAdapter(packageManager, supabaseAdapter),

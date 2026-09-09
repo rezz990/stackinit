@@ -6,7 +6,7 @@ import {
   resolveDataSelection,
   satisfiesCapabilities,
 } from "../src/integrations/compatibility.ts";
-import { DATABASE_DEFINITIONS } from "../src/integrations/catalog.ts";
+import { getDatabaseDefinition } from "../src/integrations/catalog.ts";
 import type { ProjectSpec } from "../src/types/project-context.ts";
 
 const validNextSpec: ProjectSpec = {
@@ -19,18 +19,18 @@ const validNextSpec: ProjectSpec = {
 
 describe("project compatibility", () => {
   test("uses server capability requirements instead of framework IDs", () => {
-    const requirements = DATABASE_DEFINITIONS[0]?.requiredCapabilities;
+    const requirements = getDatabaseDefinition("supabase").requiredCapabilities;
     expect(requirements).toEqual({ server: true });
     expect(
       satisfiesCapabilities(
         { client: true, server: true, typescript: true },
-        requirements ?? {},
+        requirements,
       ),
     ).toBe(true);
     expect(
       satisfiesCapabilities(
         { client: true, server: false, typescript: true },
-        requirements ?? {},
+        requirements,
       ),
     ).toBe(false);
   });
@@ -42,7 +42,7 @@ describe("project compatibility", () => {
   });
 
   test("resolves the database-required ORM from integration metadata", () => {
-    expect(DATABASE_DEFINITIONS[0]?.requiredOrm).toBe("prisma");
+    expect(getDatabaseDefinition("supabase").requiredOrm).toBe("prisma");
     expect(resolveDataSelection("nextjs", "supabase")).toEqual({
       database: "supabase",
       orm: "prisma",
