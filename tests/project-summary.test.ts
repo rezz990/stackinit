@@ -1,0 +1,42 @@
+import { describe, expect, test } from "bun:test";
+
+import { formatProjectSummary } from "../src/cli/create-command.ts";
+
+describe("project summary", () => {
+  test("uses user-facing option labels", () => {
+    expect(
+      formatProjectSummary({
+        name: "washflow",
+        rootDirectory: "/workspaces/washflow",
+        framework: "nextjs",
+        packageManager: "bun",
+        database: "supabase",
+        orm: "prisma",
+        styling: "tailwind",
+      }),
+    ).toBe(
+      [
+        "Project washflow",
+        "Framework Next.js",
+        "Package Manager Bun",
+        "Database Supabase",
+        "ORM Prisma",
+        "Styling Tailwind CSS",
+      ].join("\n"),
+    );
+  });
+
+  test("uses the registered Vite framework label", () => {
+    expect(
+      formatProjectSummary({
+        name: "dashboard",
+        rootDirectory: "/workspaces/dashboard",
+        framework: "vue-vite",
+        packageManager: "npm",
+        database: "none",
+        orm: "none",
+        styling: "none",
+      }),
+    ).toContain("Framework Vue + Vite");
+  });
+});
