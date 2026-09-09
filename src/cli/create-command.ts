@@ -2,10 +2,7 @@ import * as prompts from "@clack/prompts";
 import type { Command } from "commander";
 
 import { ExecaCommandRunner } from "../adapters/execa-command-runner.ts";
-import { NextjsAdapter } from "../adapters/nextjs-adapter.ts";
 import { createPackageManager } from "../adapters/package-manager.ts";
-import { PrismaAdapter } from "../adapters/prisma-adapter.ts";
-import { supabaseAdapter } from "../adapters/supabase-adapter.ts";
 import {
   ProjectSetupError,
   setupProject,
@@ -20,6 +17,11 @@ import { getOptionLabel } from "../core/project-option.ts";
 import {
   ORM_LABELS,
   INTEGRATION_OPTIONS,
+  getDatabaseOptions,
+  getDatabaseSetupNote,
+  getFrameworkIntegration,
+  getStylingOptions,
+  createOrmAdapter,
   resolveDatabaseIntegration,
 } from "../integrations/registry.ts";
 import type {
@@ -74,13 +76,13 @@ export async function promptForProjectContext(
 
   const database = await prompts.select<DatabaseId>({
     message: "Database",
-    options: [...INTEGRATION_OPTIONS.databases],
+    options: [...getDatabaseOptions(framework)],
   });
   if (wasCancelled(database)) return { status: "cancelled" };
 
   const styling = await prompts.select<Styling>({
     message: "Styling",
-    options: [...INTEGRATION_OPTIONS.styling],
+    options: [...getStylingOptions(framework)],
   });
   if (wasCancelled(styling)) return { status: "cancelled" };
 
@@ -98,10 +100,9 @@ export async function promptForProjectContext(
     context: createProjectContext(
       {
         name,
-        framework,
         packageManager,
         styling,
-        ...resolveDatabaseIntegration(database),
+        ...resolveDatabaseIntegration(framework, database),
       },
       baseDirectory,
     ),
@@ -126,7 +127,7 @@ export function formatProjectSummary(context: ProjectContext): string {
 export function registerCreateCommand(program: Command): void {
   program
     .command("create [project-name]")
-    .description("Configure a new project")
+    .description("Create a new project from a supported stack")
     .action(async (projectName: string | undefined) => {
       const promptResult = await promptForProjectContext(
         projectName,
@@ -146,37 +147,21 @@ export function registerCreateCommand(program: Command): void {
           context.packageManager,
           new ExecaCommandRunner(),
         );
+        const ormAdapter = createOrmAdapter(context.orm, packageManager);
         await setupProject(context, {
-          frameworkAdapter: new NextjsAdapter(packageManager),
-          ...(context.orm === "prisma"
-            ? {
-                ormAdapter: new PrismaAdapter(
-                  packageManager,
-                  supabaseAdapter,
-                ),
-              }
-            : {}),
+          frameworkAdapter: getFrameworkIntegration(
+            context.framework,
+          ).createAdapter(packageManager),
+          ...(ormAdapter ? { ormAdapter } : {}),
           observer: {
             start: (stage) => progress.start(stageStartMessage(stage)),
-            complete: (stage) => progress.stop(stageCompleteMessage(stage)),
+            complete: (stage) =>
+              progress.stop(stageCompleteMessage(stage, context)),
           },
         });
 
-        if (context.database === "supabase") {
-          prompts.note(
-            [
-              "1. Open your Supabase project.",
-              "2. Copy the pooled runtime database URL.",
-              "3. Set DATABASE_URL in .env.",
-              "4. Copy the direct or session database URL.",
-              "5. Set DIRECT_URL in .env.",
-              "",
-              "Then run:",
-              packageManager.formatExecuteCommand("prisma", ["migrate", "dev"]),
-            ].join("\n"),
-            "Supabase setup",
-          );
-        }
+        const setupNote = getDatabaseSetupNote(context.database, packageManager);
+        if (setupNote) prompts.note(setupNote.message, setupNote.title);
 
         prompts.outro(
           `Project ready.\n\ncd ${context.name}\n${packageManager.formatRunCommand("dev")}`,
@@ -187,7 +172,7 @@ export function registerCreateCommand(program: Command): void {
         const details = error instanceof Error ? error.message : "Unexpected error.";
         prompts.cancel(
           stage !== undefined && stage !== "framework"
-            ? `${stage.startsWith("orm-") ? "The project was created, but Supabase + Prisma setup could not be completed." : "The project was created, but StackInit setup could not be completed."}\n\n${details}`
+            ? `${stage.startsWith("orm-") ? "The project was created, but the selected data integrations could not be configured." : "The project was created, but StackInit setup could not be completed."}\n\n${details}`
             : details,
         );
         process.exitCode = 1;
@@ -199,18 +184,18 @@ export function registerCreateCommand(program: Command): void {
 const STAGE_MESSAGES: Readonly<
   Record<ProjectSetupStage, { readonly start: string; readonly complete: string }>
 > = {
-  framework: { start: "Creating project...", complete: "Next.js project created" },
+  framework: { start: "Creating project...", complete: "Project scaffold created" },
   "orm-dependencies": {
-    start: "Installing Prisma dependencies...",
-    complete: "Prisma dependencies installed",
+    start: "Installing ORM dependencies...",
+    complete: "ORM dependencies installed",
   },
   "orm-configuration": {
-    start: "Configuring Prisma and Supabase...",
-    complete: "Prisma and Supabase configured",
+    start: "Configuring data integrations...",
+    complete: "Data integrations configured",
   },
   "orm-generation": {
-    start: "Generating Prisma Client...",
-    complete: "Prisma Client generated",
+    start: "Generating ORM client...",
+    complete: "ORM client generated",
   },
   manifest: {
     start: "Saving StackInit manifest...",
@@ -222,12 +207,14 @@ function stageStartMessage(stage: ProjectSetupStage): string {
   return STAGE_MESSAGES[stage].start;
 }
 
-function stageCompleteMessage(stage: ProjectSetupStage): string {
-  return STAGE_MESSAGES[stage].complete;
+function stageCompleteMessage(stage: ProjectSetupStage, context: ProjectContext): string {
+  return stage === "framework"
+    ? `${getFrameworkIntegration(context.framework).name} project created`
+    : STAGE_MESSAGES[stage].complete;
 }
 
 function stageFailureMessage(stage: ProjectSetupStage | undefined): string {
   if (stage === "framework" || stage === undefined) return "Project creation failed";
-  if (stage.startsWith("orm-")) return "Prisma setup failed";
+  if (stage.startsWith("orm-")) return "Data integration setup failed";
   return "StackInit manifest could not be saved";
 }

@@ -41,7 +41,7 @@ const packageJson = {
     "@prisma/adapter-pg": "7.0.0",
     pg: "8.0.0",
   },
-  devDependencies: { prisma: "7.0.0" },
+  devDependencies: { prisma: "7.0.0", tailwindcss: "4.0.0" },
 };
 
 afterEach(async () => {
@@ -202,6 +202,18 @@ describe("StackInit doctor", () => {
     expect(result(report, "prisma.version-consistency").severity).toBe("error");
   });
 
+  test("detects a missing selected styling dependency", async () => {
+    const root = await healthyProject();
+    const current = structuredClone(packageJson);
+    delete (current.devDependencies as Record<string, string>).tailwindcss;
+    await writeFile(join(root, "package.json"), JSON.stringify(current));
+
+    const report = await runDoctor(root, new AvailabilityRunner());
+
+    expect(result(report, "styling.tailwind.dependency").severity).toBe("error");
+    expect(report.exitCode).toBe(1);
+  });
+
   test("treats identical connection roles as a warning with exit zero", async () => {
     const root = await healthyProject();
     const url = "postgresql://db.example.com/app";
@@ -233,9 +245,41 @@ describe("StackInit doctor", () => {
       "project",
       "package-manager",
       "framework.nextjs",
+      "styling.tailwind",
       "database.supabase",
       "orm.prisma",
     ]);
+  });
+
+  test("validates a healthy React + Vite Tailwind project", async () => {
+    const config: StackInitConfig = {
+      ...baseConfig,
+      framework: "react-vite",
+      database: "none",
+      orm: "none",
+    };
+    const root = await mkdtemp(join(tmpdir(), "stackinit-doctor-vite-"));
+    temporaryDirectories.push(root);
+    await writeConfig(root, config);
+    await mkdir(join(root, "node_modules"));
+    await mkdir(join(root, "src"));
+    await writeFile(join(root, "package.json"), JSON.stringify({
+      dependencies: { react: "19.0.0" },
+      devDependencies: {
+        vite: "8.0.0",
+        tailwindcss: "4.0.0",
+        "@tailwindcss/vite": "4.0.0",
+      },
+    }));
+    await writeFile(join(root, "vite.config.ts"), "plugins: [react(), tailwindcss()]\n");
+    await writeFile(join(root, "src", "index.css"), '@import "tailwindcss";\n');
+
+    const report = await runDoctor(root, new AvailabilityRunner());
+
+    expect(report.exitCode).toBe(0);
+    expect(result(report, "framework.react-vite.dependency").severity).toBe("success");
+    expect(result(report, "styling.tailwind.vite-plugin").severity).toBe("success");
+    expect(result(report, "styling.tailwind.stylesheet").severity).toBe("success");
   });
 
   test.each([

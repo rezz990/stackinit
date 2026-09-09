@@ -3,7 +3,7 @@ import { z } from "zod";
 const commonManifestSchema = z.object({
   $schema: z.literal("https://stackinit.dev/schema.json"),
   version: z.literal(1),
-  framework: z.literal("nextjs"),
+  framework: z.enum(["nextjs", "react-vite", "vue-vite"]),
   packageManager: z.enum(["bun", "npm", "pnpm", "yarn"]),
   styling: z.array(z.literal("tailwind")).max(1),
 });
@@ -14,7 +14,15 @@ export const stackInitConfigSchema = z.intersection(
     z.object({ database: z.literal("supabase"), orm: z.literal("prisma") }),
     z.object({ database: z.literal("none"), orm: z.literal("none") }),
   ]),
-);
+).superRefine((config, context) => {
+  if (config.framework !== "nextjs" && config.database !== "none") {
+    context.addIssue({
+      code: "custom",
+      path: ["database"],
+      message: "Client-only frameworks cannot use server database integrations.",
+    });
+  }
+});
 
 export type StackInitConfig = z.infer<typeof stackInitConfigSchema>;
 

@@ -49,6 +49,7 @@ function adapters(
     framework: {
       id: "nextjs",
       name: "Next.js",
+      capabilities: { client: true, server: true, typescript: true },
       create: (context) => operation("framework", context),
     },
     orm: {

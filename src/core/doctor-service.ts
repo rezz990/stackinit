@@ -1,12 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { nextjsDoctor } from "../adapters/nextjs-doctor.ts";
 import { createPackageManager } from "../adapters/package-manager.ts";
 import { packageManagerDoctor } from "../adapters/package-manager-doctor.ts";
-import { prismaDoctor } from "../adapters/prisma-doctor.ts";
 import { projectDoctor } from "../adapters/project-doctor.ts";
-import { supabaseDoctor } from "../adapters/supabase-doctor.ts";
+import {
+  getDatabaseDoctor,
+  getFrameworkIntegration,
+  getOrmDoctor,
+  getStylingDoctor,
+} from "../integrations/registry.ts";
 import type { CommandRunner } from "./command-runner.ts";
 import { AdapterRegistry } from "./adapter-registry.ts";
 import { findProjectRoot, readConfig } from "./config-service.ts";
@@ -72,12 +75,16 @@ export async function runDoctor(
 }
 
 export function createDoctorChecks(config: StackInitConfig): readonly DoctorCheck[] {
+  const stylingDoctor = getStylingDoctor(config.styling);
+  const databaseDoctor = getDatabaseDoctor(config.database);
+  const ormDoctor = getOrmDoctor(config.orm);
   const registeredChecks = [
     projectDoctor,
     packageManagerDoctor,
-    nextjsDoctor,
-    ...(config.database === "supabase" ? [supabaseDoctor] : []),
-    ...(config.orm === "prisma" ? [prismaDoctor] : []),
+    getFrameworkIntegration(config.framework).doctor,
+    ...(stylingDoctor ? [stylingDoctor] : []),
+    ...(databaseDoctor ? [databaseDoctor] : []),
+    ...(ormDoctor ? [ormDoctor] : []),
   ];
   const registry = new AdapterRegistry<DoctorCheck>(registeredChecks);
   return registeredChecks.map((check) => registry.get(check.id));

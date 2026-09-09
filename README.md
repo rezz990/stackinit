@@ -1,8 +1,8 @@
 # StackInit
 
 StackInit is a modular CLI for scaffolding and validating modern application
-stacks. v0.1 ships with Next.js project generation and optional Supabase +
-Prisma integration.
+stacks. It ships with Next.js, React + Vite, and Vue + Vite project generation,
+plus optional Supabase + Prisma integration for the server-capable Next.js stack.
 
 > StackInit v0.1 is not yet published to npm. The registry commands below show
 > the intended usage after publication; use the local-development instructions
@@ -35,7 +35,8 @@ bun run src/index.ts create my-app
 ## What StackInit Does
 
 - Collects and validates project configuration interactively.
-- Uses the official `create-next-app` generator with non-interactive arguments.
+- Uses the official `create-next-app` and `create-vite` generators with
+  non-interactive arguments.
 - Optionally configures the built-in Supabase + Prisma integration.
 - Writes `.stackinit.json` only after every required setup stage succeeds.
 - Provides read-only `info` and local-only `doctor` commands.
@@ -47,7 +48,9 @@ StackInit v0.1 supports exactly:
 
 ```text
 Framework
-└── Next.js
+├── Next.js
+├── React + Vite
+└── Vue + Vite
 
 Styling
 ├── Tailwind CSS
@@ -65,6 +68,11 @@ ORM
 Selecting Supabase automatically selects Prisma in v0.1. This is an
 opinionated compatibility relationship between two built-in integrations, not
 a database dependency of the StackInit CLI.
+
+React + Vite and Vue + Vite are client-side scaffolds, so their database choice
+is intentionally limited to None. StackInit never generates a browser project
+that imports Prisma. Tailwind CSS uses its current Vite plugin integration for
+both Vite frameworks.
 
 ## Commands
 
@@ -166,7 +174,7 @@ There is no external plugin loader in v0.1.
 
 ## Current Limitations
 
-- Only Next.js is generated in v0.1.
+- Nuxt, SvelteKit, and other frameworks are not yet implemented.
 - Supabase is the only database integration and is paired with Prisma.
 - Supabase provisioning, credentials, and remote operations remain manual.
 - Yarn support targets modern Yarn's downloaded-executable workflow.

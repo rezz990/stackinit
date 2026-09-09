@@ -5,6 +5,11 @@ import type { ProjectContext } from "../types/project-context.ts";
 export class NextjsAdapter implements FrameworkAdapter {
   readonly id = "nextjs";
   readonly name = "Next.js";
+  readonly capabilities = {
+    client: true,
+    server: true,
+    typescript: true,
+  } as const;
 
   constructor(private readonly packageManager: PackageManager) {}
 

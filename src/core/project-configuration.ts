@@ -3,16 +3,15 @@ import { resolve } from "node:path";
 import type {
   DatabaseConfig,
   DatabaseId,
-  Framework,
   OrmId,
   PackageManagerId,
   ProjectContext,
+  ProjectStack,
   Styling,
 } from "../types/project-context.ts";
 
-export type ProjectConfiguration = DatabaseConfig & {
+export type ProjectConfiguration = ProjectStack & {
   readonly name: string;
-  readonly framework: Framework;
   readonly packageManager: PackageManagerId;
   readonly styling: Styling;
 };

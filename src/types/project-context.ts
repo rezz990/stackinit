@@ -1,4 +1,4 @@
-export type Framework = "nextjs";
+export type Framework = "nextjs" | "react-vite" | "vue-vite";
 export type PackageManagerId = "bun" | "npm" | "pnpm" | "yarn";
 export type DatabaseId = "supabase" | "none";
 export type OrmId = "prisma" | "none";
@@ -11,9 +11,18 @@ export type DatabaseConfig =
 interface ProjectDetails {
   readonly name: string;
   readonly rootDirectory: string;
-  readonly framework: Framework;
   readonly packageManager: PackageManagerId;
   readonly styling: Styling;
 }
 
-export type ProjectContext = ProjectDetails & DatabaseConfig;
+export type ProjectStack =
+  (
+    | ({ readonly framework: "nextjs" } & DatabaseConfig)
+    | {
+        readonly framework: "react-vite" | "vue-vite";
+        readonly database: "none";
+        readonly orm: "none";
+      }
+  );
+
+export type ProjectContext = ProjectDetails & ProjectStack;

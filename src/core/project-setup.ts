@@ -46,12 +46,12 @@ export async function setupProject(
     createProject(context, dependencies.frameworkAdapter),
   );
 
-  if (context.orm === "prisma") {
+  if (context.orm !== "none") {
     const ormAdapter = dependencies.ormAdapter;
     if (!ormAdapter) {
       throw new ProjectSetupError(
         "orm-dependencies",
-        new Error("A Prisma adapter is required for this project."),
+        new Error(`An ORM adapter for "${context.orm}" is required for this project.`),
       );
     }
     await runStage("orm-dependencies", dependencies, () =>

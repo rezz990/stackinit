@@ -27,7 +27,10 @@
     "prisma",
     "scaffolding",
     "supabase",
-    "typescript"
+    "typescript",
+    "vite",
+    "react",
+    "vue"
   ],
   "repository": {
     "type": "git",

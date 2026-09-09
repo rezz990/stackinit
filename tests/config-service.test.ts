@@ -56,6 +56,17 @@ describe("StackInit configuration schema", () => {
     expect(validateConfig(noDatabaseConfig)).toEqual(noDatabaseConfig);
   });
 
+  test("accepts client-only Vite projects and rejects server database wiring", () => {
+    const viteConfig: StackInitConfig = {
+      ...noDatabaseConfig,
+      framework: "react-vite",
+    };
+    expect(validateConfig(viteConfig)).toEqual(viteConfig);
+    expect(() =>
+      validateConfig({ ...supabaseConfig, framework: "vue-vite" }),
+    ).toThrow("The database and ORM configuration is not supported.");
+  });
+
   test("creates manifests from database and no-database project contexts", () => {
     expect(
       createProjectManifest({

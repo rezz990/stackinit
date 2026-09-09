@@ -25,4 +25,18 @@ describe("project summary", () => {
       ].join("\n"),
     );
   });
+
+  test("uses the registered Vite framework label", () => {
+    expect(
+      formatProjectSummary({
+        name: "dashboard",
+        rootDirectory: "/workspaces/dashboard",
+        framework: "vue-vite",
+        packageManager: "npm",
+        database: "none",
+        orm: "none",
+        styling: "none",
+      }),
+    ).toContain("Framework Vue + Vite");
+  });
 });
